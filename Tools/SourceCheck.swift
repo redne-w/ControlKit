@@ -155,7 +155,7 @@ func main() throws {
             """
             Usage: SourceCheck self-test | source <file> | functions <source-path> <ast-file>
                    SourceCheck package <dump-package-json>
-            Local checks only. Prefer `just source-check`; compiler format changes fail closed.
+            Local checks only. Prefer `just check`; compiler format changes fail closed.
             Use - for a bounded stdin stream instead of an input file.
             Inputs: source <= 1 MiB; compiler dump <= 8 MiB; manifest <= 1 MiB.
             """)

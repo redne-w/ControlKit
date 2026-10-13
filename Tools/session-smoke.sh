@@ -1,5 +1,5 @@
 #!/bin/sh
-# Live acceptance for milestones 7–9. Uses one explicitly dedicated simulator.
+# Live session scheduling, observation, interaction, uncertainty, and recovery checks.
 set -eu
 if [ "${1:-}" = "--help" ] || [ "$#" -ne 2 ]; then
     printf 'Usage: sh Tools/session-smoke.sh <ControlKit-binary> <dedicated-udid>\n'
