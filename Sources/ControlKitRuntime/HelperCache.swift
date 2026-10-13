@@ -53,7 +53,7 @@ enum HelperCache {
                     "-derivedDataPath", entry.path, "-parallel-testing-enabled", "NO",
                     "CODE_SIGNING_ALLOWED=NO", "SWIFT_TREAT_WARNINGS_AS_ERRORS=YES",
                 ], milliseconds: 900_000, budget: budget,
-                allowTruncatedDiagnostics: true)
+                allowTruncatedDiagnostics: true, label: "helper_build")
             _ = try RuntimeFiles.cacheBytes(cache)
             // Publish only a finished build whose inputs did not change during compilation.
             try requireRuntime(

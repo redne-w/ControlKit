@@ -62,7 +62,10 @@ let package = Package(
         .testTarget(name: "ControlKitWireTests", dependencies: ["ControlKitWire"]),
         .testTarget(name: "ControlKitSessionTests", dependencies: ["ControlKitSession"]),
         .testTarget(name: "ControlKitSupervisorTests", dependencies: ["ControlKitSupervisor"]),
-        .testTarget(name: "ControlKitRuntimeTests", dependencies: ["ControlKitRuntime"]),
+        .testTarget(
+            name: "ControlKitRuntimeTests",
+            dependencies: ["ControlKitRuntime", "ControlKitProcess"]
+        ),
         .testTarget(
             name: "ControlKitTestSupportTests",
             dependencies: ["ControlKitTestSupport", "ControlKitCore"]),

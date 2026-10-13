@@ -149,13 +149,17 @@ enum DetachedSupervisor {
             posix_spawn_file_actions_destroy(&actions)
             posix_spawnattr_destroy(&attributes)
         }
-        for descriptor: Int32 in [0, 1, 2] {
+        for descriptor: Int32 in [0, 1] {
             guard
                 posix_spawn_file_actions_addopen(
                     &actions, descriptor, "/dev/null", descriptor == 0 ? O_RDONLY : O_WRONLY, 0)
                     == 0
             else { throw WireFailure.socketFailure }
         }
+        guard
+            posix_spawn_file_actions_addopen(
+                &actions, 2, errorPath(), O_WRONLY | O_CREAT | O_APPEND, 0o600) == 0
+        else { throw WireFailure.socketFailure }
         guard
             posix_spawnattr_setflags(
                 &attributes, Int16(POSIX_SPAWN_SETSID | POSIX_SPAWN_CLOEXEC_DEFAULT)) == 0
@@ -185,6 +189,18 @@ enum DetachedSupervisor {
                     env.baseAddress!)
             }
         }
-        guard result == 0, pid > 0 else { throw WireFailure.socketFailure }
+        guard result == 0, pid > 0 else {
+            DiagnosticLog.record("supervisor.spawn_failed", ["posixError": "\(result)"])
+            throw WireFailure.socketFailure
+        }
+        DiagnosticLog.record("supervisor.spawned", ["pid": "\(pid)"])
+    }
+
+    /// The detached supervisor has no terminal, so its standard error goes to the owner-only log
+    /// folder. Without that folder it falls back to discarding output, as before logging existed.
+    private static func errorPath() -> String {
+        let directory = DiagnosticLog.directoryURL()
+        guard (try? PrivateDirectory(directory)) != nil else { return "/dev/null" }
+        return directory.appendingPathComponent(DiagnosticLog.supervisorErrorName).path
     }
 }

@@ -70,6 +70,15 @@ package final class PrivateDirectory {
         }
     }
 
+    /// Atomically replaces `target`; both names stay inside this descriptor-pinned directory.
+    package func rename(_ name: String, to target: String) throws {
+        try validateName(name)
+        try validateName(target)
+        guard renameat(descriptor, name, descriptor, target) == 0 else {
+            throw RuntimeFailure("private_files", "Cannot rename private file.")
+        }
+    }
+
     package func entries(limit: Int = 256) throws -> [String] {
         let copy = dup(descriptor)
         guard copy >= 0 else { throw RuntimeFailure("private_files", "Cannot list directory.") }

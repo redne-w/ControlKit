@@ -57,7 +57,8 @@ package final class AppLifecycle {
         _ = try XcodeValidation.validate(
             request.report, tools: tools, budget: budget, destination: request.destination)
         let arguments = [
-            "xcodebuild", container.kind == .project ? "-project" : "-workspace", container.path,
+            "xcodebuild", "-quiet", container.kind == .project ? "-project" : "-workspace",
+            container.path,
             "-scheme", scheme, "-configuration", configuration,
             "-destination", request.destination,
             "-derivedDataPath", cache.derived.url.path, "-disableAutomaticPackageResolution",

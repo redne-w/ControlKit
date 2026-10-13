@@ -72,6 +72,7 @@ package final class AppleTools {
         do {
             try Self.validate(result, allowTruncatedDiagnostics: allowTruncatedDiagnostics)
         } catch let failure as RuntimeFailure {
+            DiagnosticLog.toolFailure(label: label, arguments: arguments, result: result)
             throw RuntimeFailure(failure.code, "\(label): \(failure.message)")
         }
         return result.stdout
@@ -88,7 +89,11 @@ package final class AppleTools {
                 timeoutMilliseconds: try budget.remaining(maximum: 30_000), outputLimit: 65_536),
             cancellation: { cancellation?.isRequested ?? false }
         ).wait()
-        try validate(result)
+        do { try validate(result) } catch {
+            DiagnosticLog.toolFailure(
+                label: "toolchain_probe", arguments: [executable] + arguments, result: result)
+            throw error
+        }
         guard let text = String(data: result.stdout, encoding: .utf8) else {
             throw RuntimeFailure("tool_output", "Invalid tool output encoding.")
         }

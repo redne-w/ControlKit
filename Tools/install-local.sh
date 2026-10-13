@@ -123,6 +123,15 @@ main() {
     install -m 644 \
         "$source_root/plugins/ios/skills/ios-use-controlkit/SKILL.md" \
         "$share/skills/ios-use-controlkit/"
+    # ControlKit --version and every diagnostic log line report this exact build.
+    local commit
+    if commit=$(git -C "$source_root" rev-parse --short=12 HEAD 2>/dev/null); then
+        [[ -z $(git -C "$source_root" status --porcelain 2>/dev/null) ]] || commit="$commit-dirty"
+    else
+        commit=unknown-commit
+    fi
+    printf '%s\n' "$commit" > "$share/build-info"
+    chmod 644 "$share/build-info"
     quoted=$(quote_path "$bin")
     if [[ "$shell" = fish ]]; then
         path_line="fish_add_path --path --prepend $quoted"

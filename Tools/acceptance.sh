@@ -11,6 +11,9 @@ binary=$1
 device=$2
 source=$3
 runtime=$(mktemp -d "${TMPDIR:-/tmp}/controlkit-acceptance.XXXXXX")
+# Keep acceptance diagnostics out of the user's log. An already-running supervisor keeps
+# writing where it started, so the checks below rely only on CLI-side records.
+export CONTROLKIT_LOG_DIRECTORY="$runtime/logs"
 session=
 app_running=false
 cleanup() {
@@ -73,6 +76,13 @@ test -s "$runtime/screen.png"
 grep -q 'command.finished' "$runtime/logs.json"
 if grep -q 'fixed-test-secret' "$runtime/logs.json"; then
     printf 'Diagnostics included app text.\n' >&2
+    exit 1
+fi
+
+grep -q '"event":"cli.response"' "$runtime/logs/controlkit.log"
+grep -q '"operation":"ui.tap"' "$runtime/logs/controlkit.log"
+if grep -rq 'fixed-test-secret' "$runtime/logs"; then
+    printf 'Persistent diagnostics included secure fixture text.\n' >&2
     exit 1
 fi
 

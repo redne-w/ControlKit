@@ -59,6 +59,12 @@ check_help doctor
 check_help setup
 check_help run
 check_help logs
+check_help report
+leaf=$(env -u CONTROLKIT_PROBE_TOKEN "$binary" help report)
+case "$leaf" in *"Library/Logs/ControlKit"*"--output-directory"*"--files-only"*) ;; *) exit 1 ;; esac
+version=$(env -u CONTROLKIT_PROBE_TOKEN "$binary" --version)
+case "$version" in [0-9]*.[0-9]*.[0-9]*" ("*")") ;; *) exit 1 ;; esac
+printf 'Version contract passed: %s\n' "$version"
 leaf=$(env -u CONTROLKIT_PROBE_TOKEN "$binary" help probe request)
 case "$leaf" in *"Examples:"*"--timeout"*"(default:"*) ;; *) exit 1 ;; esac
 leaf=$(env -u CONTROLKIT_PROBE_TOKEN "$binary" help probe discover)

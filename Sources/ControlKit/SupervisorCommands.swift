@@ -102,6 +102,7 @@ enum SupervisorCLI {
             FileHandle.standardOutput.write(try encoder.encode(interrupted) + Data([10]))
             throw ExitCode(130)
         }
+        record(request, response)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         if json {
@@ -116,9 +117,28 @@ enum SupervisorCLI {
         }
     }
 
+    private static func record(_ request: SupervisorRequest, _ response: SupervisorResponse) {
+        DiagnosticLog.record(
+            "cli.response",
+            [
+                "operation": request.operation, "request": request.requestId.uuidString,
+                "session": response.sessionId?.uuidString ?? "none",
+                "completion": response.completion.rawValue,
+                "errorCode": response.error?.code ?? "none",
+                "errorMessage": response.error?.message ?? "none",
+            ])
+    }
+
     private static func printHuman(_ response: SupervisorResponse) {
         if let error = response.error {
             print("\(error.code): \(error.message)")
+            fflush(stdout)
+            // Error text stays fixed-phase; tool output and failure causes live in the log.
+            FileHandle.standardError.write(
+                Data(
+                    ("Details: ~/Library/Logs/ControlKit. "
+                        + "Run 'ControlKit report' to package them for the ControlKit team.\n")
+                        .utf8))
         } else if let session = response.data?.session {
             let identity = session.id.uuidString
             print("\(identity) \(session.state.rawValue) generation=\(session.generation)")

@@ -348,6 +348,21 @@ package enum AppDiagnostics {
     }
 
     package static func redact(_ text: String) -> String {
+        var value = redactCredentials(text)
+        value = value.replacingOccurrences(
+            of: #"/Users/[^\n\r"]+"#, with: "<redacted-path>",
+            options: .regularExpression)
+        value = value.replacingOccurrences(
+            of: #"/(?:private/var|var)/[^\s"]*"#, with: "<redacted-path>",
+            options: .regularExpression)
+        value = value.replacingOccurrences(
+            of: #"/[^\s"]*CoreSimulator/Devices/[^\s"]*"#, with: "<redacted-path>",
+            options: .regularExpression)
+        return value
+    }
+
+    /// Removes secrets but keeps paths, so local ControlKit diagnostics still locate build errors.
+    package static func redactCredentials(_ text: String) -> String {
         var value = text.replacingOccurrences(of: "\\/", with: "/")
         let jsonValuePattern =
             #"(?i)("(?:password|token|secret|authorization|api[_-]?key)"\s*:\s*")"#
@@ -364,20 +379,14 @@ package enum AppDiagnostics {
         value = value.replacingOccurrences(
             of: #"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+"#, with: "Bearer <redacted>",
             options: .regularExpression)
+        // Schemes start only at a token boundary. Unanchored, a long token is rescanned from
+        // every offset, which made multi-megabyte build output effectively unbounded work.
+        let scheme = #"(?<![a-zA-Z0-9+.-])[a-zA-Z][a-zA-Z0-9+.-]*://"#
         value = value.replacingOccurrences(
-            of: #"/Users/[^\n\r"]+"#, with: "<redacted-path>",
+            of: "(" + scheme + #")[^/@\s"]+@"#, with: "$1<redacted>@",
             options: .regularExpression)
         value = value.replacingOccurrences(
-            of: #"/(?:private/var|var)/[^\s"]*"#, with: "<redacted-path>",
-            options: .regularExpression)
-        value = value.replacingOccurrences(
-            of: #"/[^\s"]*CoreSimulator/Devices/[^\s"]*"#, with: "<redacted-path>",
-            options: .regularExpression)
-        value = value.replacingOccurrences(
-            of: #"([a-zA-Z][a-zA-Z0-9+.-]*://)[^/@\s"]+@"#, with: "$1<redacted>@",
-            options: .regularExpression)
-        value = value.replacingOccurrences(
-            of: #"([a-zA-Z][a-zA-Z0-9+.-]*://[^?\s#]+)[?#][^\s"]*"#, with: "$1",
+            of: "(" + scheme + #"[^?\s#]+)[?#][^\s"]*"#, with: "$1",
             options: .regularExpression)
         return value
     }

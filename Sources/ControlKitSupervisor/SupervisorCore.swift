@@ -63,6 +63,11 @@ final class SessionRecord: @unchecked Sendable {
     }
 
     func log(_ code: String, request: UUID? = nil) {
+        // The in-memory ring serves `logs`; the file outlives the supervisor for bug reports.
+        // Callers hold the core lock, and an append is one short owner-only file write.
+        DiagnosticLog.record(
+            "session.event",
+            ["session": id.uuidString, "code": code, "request": request?.uuidString ?? "none"])
         if events.count >= 1_024 { events.removeFirst() }
         events.append(
             DiagnosticEvent(
@@ -101,6 +106,24 @@ package final class SupervisorCore: @unchecked Sendable {
     }
 
     package func handle(_ request: SupervisorRequest) -> SupervisorResponse {
+        let started = ContinuousClock.now
+        let response = dispatch(request)
+        let elapsed = started.duration(to: .now).components
+        DiagnosticLog.record(
+            "supervisor.request",
+            [
+                "operation": request.operation, "request": request.requestId.uuidString,
+                "session": request.sessionId?.uuidString ?? "none",
+                "completion": response.completion.rawValue,
+                "errorCode": response.error?.code ?? "none",
+                "errorMessage": response.error?.message ?? "none",
+                "milliseconds":
+                    "\(elapsed.seconds * 1_000 + elapsed.attoseconds / 1_000_000_000_000_000)",
+            ])
+        return response
+    }
+
+    private func dispatch(_ request: SupervisorRequest) -> SupervisorResponse {
         do {
             if request.operation == "supervisor.shutdown" {
                 guard !hasLiveSessions else {
@@ -117,6 +140,8 @@ package final class SupervisorCore: @unchecked Sendable {
         } catch let failure as RuntimeFailure {
             return self.failure(request, failure.code, failure.message)
         } catch {
+            DiagnosticLog.failure(
+                "supervisor.internal_failure", error, ["operation": request.operation])
             return failure(request, "internal_failure", "Supervisor operation failed closed.")
         }
     }
@@ -189,6 +214,8 @@ package final class SupervisorCore: @unchecked Sendable {
         do { response = try route(request) } catch let error as RuntimeFailure {
             response = failure(request, error.code, error.message)
         } catch {
+            DiagnosticLog.failure(
+                "management.internal_failure", error, ["operation": request.operation])
             response = failure(request, "internal_failure", "Management operation failed closed.")
         }
         condition.lock()
@@ -391,6 +418,7 @@ package final class SupervisorCore: @unchecked Sendable {
         do {
             _ = try tools.run(["xcodebuild", "-checkFirstLaunchStatus"])
         } catch {
+            DiagnosticLog.failure("doctor.first_launch", error)
             data.findings!.append(
                 DoctorFinding(
                     severity: "error", code: "xcode_first_launch",
@@ -407,6 +435,7 @@ package final class SupervisorCore: @unchecked Sendable {
                         provenance: nil))
             }
         } catch {
+            DiagnosticLog.failure("doctor.simulators", error)
             data.findings!.append(
                 DoctorFinding(
                     severity: "error", code: "simulator_unavailable",
@@ -431,6 +460,7 @@ package final class SupervisorCore: @unchecked Sendable {
                         provenance: finding.file))
             }
         } catch {
+            DiagnosticLog.failure("doctor.discovery", error)
             data.findings!.append(
                 DoctorFinding(
                     severity: "error", code: "discovery_failed",
@@ -472,6 +502,7 @@ package final class SupervisorCore: @unchecked Sendable {
         } catch let error as RuntimeFailure {
             return failure(request, error.code, error.message)
         } catch {
+            DiagnosticLog.failure("setup.failed", error)
             return failure(request, "configuration_invalid", "Setup failed closed.")
         }
     }
@@ -559,6 +590,12 @@ package final class SupervisorCore: @unchecked Sendable {
         let budget = OperationBudget(milliseconds: request.remainingMilliseconds)
         var data = SupervisorData()
         data.completedSteps = []
+        // Per-step records show where a long run stalled or failed.
+        func completed(_ step: String) {
+            data.completedSteps!.append(step)
+            DiagnosticLog.record(
+                "run.step", ["step": step, "request": request.requestId.uuidString])
+        }
         do {
             let lifecycle = try AppLifecycle(tools: tools)
             let simulators = try SimulatorOperations(tools: tools)
@@ -567,23 +604,23 @@ package final class SupervisorCore: @unchecked Sendable {
             let artifact: AppArtifact
             if let path = request.management?.path {
                 artifact = try lifecycle.inspect(path: path, budget: budget)
-                data.completedSteps!.append("app.validate")
+                completed("app.validate")
             } else {
                 artifact = try lifecycle.build(
                     BuildRequest(
                         report: try discovery(request), product: request.management?.product,
                         destination: destination),
                     budget: budget)
-                data.completedSteps!.append("app.build")
+                completed("app.build")
             }
             data.artifact = artifact
             try simulators.boot(id, budget: budget)
-            data.completedSteps!.append("sim.boot")
+            completed("sim.boot")
             try lifecycle.install(device: id, artifact: artifact, budget: budget)
-            data.completedSteps!.append("app.install")
+            completed("app.install")
             data.launch = try lifecycle.launch(
                 device: id, bundleIdentifier: artifact.bundleIdentifier, budget: budget)
-            data.completedSteps!.append("app.launch")
+            completed("app.launch")
             var sessionRequest = request
             sessionRequest.operation = "session.start"
             sessionRequest.app = artifact.bundleIdentifier
@@ -595,7 +632,7 @@ package final class SupervisorCore: @unchecked Sendable {
                     session: session.sessionId, generation: session.helperGeneration,
                     completion: session.completion, data: data)
             }
-            data.completedSteps!.append("session.start")
+            completed("session.start")
             data.session = session.data?.session
             return SupervisorResponse(
                 request: request, epoch: epoch, session: session.sessionId,
@@ -606,6 +643,7 @@ package final class SupervisorCore: @unchecked Sendable {
             return failure(
                 request, error.code, error.message, completion: completion, data: data)
         } catch {
+            DiagnosticLog.failure("run.internal_failure", error)
             return failure(
                 request, "internal_failure", "Run failed closed.", data: data)
         }
@@ -658,6 +696,7 @@ package final class SupervisorCore: @unchecked Sendable {
         } catch let startup as RuntimeFailure {
             return startFailed(request, record: record, failure: startup)
         } catch {
+            DiagnosticLog.failure("session.start_failed", error, ["session": id.uuidString])
             return startFailed(
                 request, record: record,
                 failure: RuntimeFailure(
@@ -674,6 +713,7 @@ package final class SupervisorCore: @unchecked Sendable {
                 try record.claim?.complete()
                 released = true
             } catch {
+                DiagnosticLog.failure("session.release_failed", error)
                 released = false
             }
         }
@@ -861,6 +901,9 @@ package final class SupervisorCore: @unchecked Sendable {
             return finishSuccess(
                 request, record: record, result: reply.result, artifact: executed.1)
         } catch {
+            DiagnosticLog.failure(
+                "command.outcome_unknown", error,
+                ["session": record.id.uuidString, "operation": operation.rawValue])
             return finishUnknown(request, record: record)
         }
     }
@@ -904,6 +947,7 @@ package final class SupervisorCore: @unchecked Sendable {
                 request, artifactFailure.code, artifactFailure.message,
                 session: record.id, generation: record.machine.generation, completion: .finished)
         } catch {
+            DiagnosticLog.failure("artifact.failed", error, ["session": record.id.uuidString])
             condition.lock()
             if !privateArtifactPublished { artifactBytes -= reservedArtifactBytes }
             record.machine.markFinishedError(id: request.requestId, code: "artifact_failed")
@@ -968,6 +1012,7 @@ package final class SupervisorCore: @unchecked Sendable {
         do {
             try old.retire()
         } catch {
+            DiagnosticLog.failure("recover.retire_failed", error, ["session": id.uuidString])
             condition.lock()
             record.machine.failRecovery()
             record.retirementUnconfirmed = true
@@ -1016,6 +1061,8 @@ package final class SupervisorCore: @unchecked Sendable {
                 request, code, replacement.message,
                 session: record.id, generation: record.machine.generation)
         } catch {
+            DiagnosticLog.failure(
+                "recover.replace_failed", error, ["session": record.id.uuidString])
             condition.lock()
             record.machine.failRecovery()
             record.retirementUnconfirmed = true
@@ -1086,6 +1133,7 @@ package final class SupervisorCore: @unchecked Sendable {
                 request: request, epoch: epoch, session: id,
                 generation: record.machine.generation, completion: .finished, data: data)
         } catch {
+            DiagnosticLog.failure("stop.retire_failed", error, ["session": id.uuidString])
             condition.lock()
             _ = record.machine.finishStop(runnerRetired: false)
             condition.broadcast()
@@ -1161,6 +1209,7 @@ package final class SupervisorCore: @unchecked Sendable {
             record.claim = nil
             retired = true
         } catch {
+            DiagnosticLog.failure("expire.retire_failed", error, ["session": record.id.uuidString])
             retired = false
         }
         condition.lock()

@@ -10,7 +10,7 @@ grep -Fqx 'name: ios-use-controlkit' "$skill"
 grep -Fq 'Never replay a request whose completion is `unknown`.' "$skill"
 grep -Fq 'ControlKit session recover' "$skill"
 grep -Fq 'ControlKit session stop' "$skill"
-for command in doctor setup run sim app session ui logs; do
+for command in doctor setup run sim app session ui logs report; do
     "$1" help "$command" >/dev/null
 done
 printf 'Agent skill contract passed.\n'

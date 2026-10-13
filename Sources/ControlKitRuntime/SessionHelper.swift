@@ -37,7 +37,16 @@ package struct SessionHelper {
         } catch {
             listener.close()
             process.cancel()
-            _ = try? process.wait()
+            let exit = try? process.wait()
+            // The XCTest runner's own output is not retained; its result bundle stays here.
+            DiagnosticLog.failure(
+                "helper.start_failed", error,
+                [
+                    "session": session.uuidString, "generation": "\(generation)",
+                    "runnerReason": exit?.reason.rawValue ?? "unknown",
+                    "runnerExitCode": exit?.exitCode.map { "\($0)" } ?? "none",
+                    "resultBundle": runtime.url.appendingPathComponent("result.xcresult").path,
+                ])
             throw RuntimeFailure(
                 "retirement_unconfirmed",
                 "Helper startup failed before authenticated runner retirement could be proven.")

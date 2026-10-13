@@ -211,6 +211,40 @@ Recovery retires the old runner and does not replay the action or relaunch the a
 [milestones 7–9 report](docs/MILESTONES_7_9.md) for selectors, snapshot/artifact bounds, security,
 failure semantics, and the remaining supervisor-crash limitation.
 
+## Diagnostics and reporting problems
+
+ControlKit keeps a local diagnostic log so failures can be investigated after the fact. Nothing is
+sent anywhere; files stay on your Mac until you share them.
+
+```sh
+ControlKit --version                         # version plus the installed commit
+ControlKit report                            # writes ~/Desktop/ControlKit-report-<time>.zip
+ControlKit report --output-directory /tmp --files-only
+```
+
+Run `ControlKit report` from the repository you were automating, then send the printed archive
+with a short description of what you ran and what you expected. In human (non-JSON) mode, failed
+commands print a reminder on standard error.
+
+`~/Library/Logs/ControlKit/` is owner-only (`0700` directory, `0600` files) and bounded:
+
+| File | Contents | Bound |
+| --- | --- | --- |
+| `controlkit.log`, `controlkit.1.log` | One JSON line per CLI invocation (sanitized arguments, exit status, failure text), supervisor request (operation, error code, duration), `run` step, session event, and internal failure cause | 4 MiB each, two generations |
+| `tool-failures/*.log` | Arguments plus the last 1 MiB of stdout and stderr of each failed `xcodebuild`/`simctl`/`xcrun` call; the log line also quotes compiler `error:` lines | Newest 10 |
+| `supervisor-stderr.log` | Standard error of the background supervisor, including Swift runtime trap messages | Truncated past 1 MiB when a supervisor starts |
+
+The report adds recent `ControlKit*.ips` crash reports (newest 5), `sw_vers`, `xcode-select -p`,
+`xcodebuild -version`, `simctl list runtimes`/`devices`, and `ControlKit doctor --json` output.
+
+Before writing, ControlKit removes values of `--text`, password/token/secret/API-key fields, bearer
+tokens, and URL user info and query strings, and replaces your home directory with `~`. Typed text
+read with `--text-stdin` is never logged. Project paths, scheme names, simulator names, and build
+output are kept because they are needed to reproduce failures; review the archive before sending it
+outside your team. The XCTest runner's own output is not captured; a helper startup failure logs
+the path of its retained `result.xcresult` instead. Logging is best effort and never changes a
+command's result. Development `just` recipes write to `.build/toolchains/<build>/logs` instead.
+
 ## Live XCTest proof
 
 Use a dedicated simulator: the harness installs and relaunches `dev.controlkit.fixture`.

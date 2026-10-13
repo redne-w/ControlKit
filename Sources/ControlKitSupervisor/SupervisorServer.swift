@@ -1,5 +1,6 @@
 import ControlKitRuntime
 import ControlKitWire
+import Darwin
 import Foundation
 
 package final class SupervisorServer: @unchecked Sendable {
@@ -13,7 +14,30 @@ package final class SupervisorServer: @unchecked Sendable {
 
     package init(source: URL, cache: URL) throws {
         listener = try LocalListener()
-        core = try SupervisorCore(source: source, cache: cache, tools: AppleTools())
+        do {
+            core = try SupervisorCore(source: source, cache: cache, tools: AppleTools())
+        } catch {
+            DiagnosticLog.failure("supervisor.start_failed", error)
+            throw error
+        }
+        Self.boundErrorFile()
+        DiagnosticLog.record(
+            "supervisor.started",
+            [
+                "epoch": core.epoch.uuidString,
+                "developerDirectory": core.tools.identity.developerDirectory,
+                "xcode": "\(core.tools.identity.xcodeVersion) (\(core.tools.identity.xcodeBuild))",
+            ])
+    }
+
+    /// Standard error is the append-only supervisor-stderr.log, which keeps Swift runtime trap
+    /// messages. Only a fresh supervisor truncates it, which bounds it across restarts.
+    private static func boundErrorFile() {
+        var info = stat()
+        guard fstat(STDERR_FILENO, &info) == 0, info.st_mode & S_IFMT == S_IFREG,
+            info.st_size > 1_024 * 1_024
+        else { return }
+        _ = ftruncate(STDERR_FILENO, 0)
     }
 
     package func run() throws {
@@ -23,6 +47,7 @@ package final class SupervisorServer: @unchecked Sendable {
                 if clientCount >= 32 {
                     clients.unlock()
                     socket.close()
+                    DiagnosticLog.record("supervisor.client_rejected", ["limit": "32"])
                 } else {
                     clientCount += 1
                     lastActivity = .now
@@ -39,7 +64,11 @@ package final class SupervisorServer: @unchecked Sendable {
                 lastExpiryCheck = .now
                 DispatchQueue.global().async { [core] in core.expireSessions() }
             }
-            if empty && (idle || stopped) && !core.hasLiveSessions { return }
+            if empty && (idle || stopped) && !core.hasLiveSessions {
+                DiagnosticLog.record(
+                    "supervisor.stopped", ["reason": stopped ? "shutdown_request" : "idle"])
+                return
+            }
         }
     }
 
@@ -67,7 +96,9 @@ package final class SupervisorServer: @unchecked Sendable {
                 clients.unlock()
             }
         } catch {
-            return
+            // A client that exits or times out mid-frame is not a supervisor fault, but it is the
+            // only trace of a lost reply, so record it.
+            DiagnosticLog.failure("supervisor.client_failed", error)
         }
     }
 }

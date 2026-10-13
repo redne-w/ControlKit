@@ -9,6 +9,8 @@ export CONTROLKIT_PROBE_CLI := build_root / "swift/debug/ControlKit"
 export CONTROLKIT_PROBE_PRODUCTS := build_root / "xcode/Build/Products"
 export CONTROLKIT_XCODE_BUILD := build_root / "xcode"
 export CONTROLKIT_SOURCE_ROOT := justfile_directory()
+# Development runs, tests, and acceptance must not fill a tester's ~/Library/Logs/ControlKit.
+export CONTROLKIT_LOG_DIRECTORY := build_root / "logs"
 
 # List development commands. Use `just --show RECIPE` to inspect one before running it.
 default:

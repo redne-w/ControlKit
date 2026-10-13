@@ -132,3 +132,7 @@ ControlKit sim shutdown --device "$UDID" --json                               # 
 
 Stopping a session preserves the app process, app data, and simulator. Always stop the session when
 finished so its lease and authenticated XCTest runner retire cleanly.
+
+When a ControlKit failure is unexplained (for example `tool_failed`, `internal_failure`, or a
+helper that will not start), run `ControlKit report --json` from the repository and give the user
+the archive path. Do not try to read or edit `~/Library/Logs/ControlKit` as an API.
