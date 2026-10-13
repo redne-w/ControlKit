@@ -1,0 +1,14 @@
+{
+    "schemaVersion": 1,
+    "requestId": "00000000-0000-0000-0000-000000000001",
+    "supervisorEpoch": "00000000-0000-0000-0000-000000000002",
+    "sessionId": "00000000-0000-0000-0000-000000000003",
+    "helperGeneration": 4,
+    "ok": false,
+    "completion": "unknown",
+    "error": {
+        "code": "outcome_unknown",
+        "message": "The helper disconnected after dispatch. Do not replay this action."
+    },
+    "data": null
+}

@@ -1,0 +1,9 @@
+.build/
+.swiftpm/
+.DS_Store
+*.xcuserstate
+xcuserdata/
+Probe/ControlKitProbe.xcodeproj/project.xcworkspace/
+Helper/ControlKitRuntime.xcodeproj/project.xcworkspace/
+# Keep development entry points even when a user's global ignore excludes justfile.
+!justfile

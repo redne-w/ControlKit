@@ -1,0 +1,11 @@
+{
+    "schemaVersion": 1,
+    "requestId": "00000000-0000-0000-0000-000000000001",
+    "supervisorEpoch": "00000000-0000-0000-0000-000000000002",
+    "sessionId": "00000000-0000-0000-0000-000000000003",
+    "helperGeneration": 1,
+    "ok": true,
+    "completion": "finished",
+    "error": null,
+    "data": { "snapshotId": "example", "elements": [], "truncated": false }
+}

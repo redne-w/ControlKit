@@ -1,0 +1,206 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {};
+    objectVersion = 56;
+    objects = {
+        A00000000000000000000001 = {
+            isa = PBXProject;
+            attributes = { LastUpgradeCheck = 2640; };
+            buildConfigurationList = A00000000000000000000002;
+            compatibilityVersion = "Xcode 14.0";
+            developmentRegion = en;
+            knownRegions = (en, Base);
+            mainGroup = A00000000000000000000003;
+            productRefGroup = A00000000000000000000004;
+            projectDirPath = "";
+            projectRoot = "";
+            targets = (B00000000000000000000001, C00000000000000000000001);
+        };
+        A00000000000000000000002 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (A00000000000000000000005);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Debug;
+        };
+        A00000000000000000000003 = {
+            isa = PBXGroup;
+            children = (
+                B00000000000000000000006, C00000000000000000000006,
+                C00000000000000000000007, C00000000000000000000008,
+                D00000000000000000000001, D00000000000000000000002,
+                A00000000000000000000004
+            );
+            sourceTree = "<group>";
+        };
+        A00000000000000000000004 = {
+            isa = PBXGroup;
+            children = (B00000000000000000000002, C00000000000000000000002);
+            name = Products;
+            sourceTree = "<group>";
+        };
+        A00000000000000000000005 = {
+            isa = XCBuildConfiguration;
+            name = Debug;
+            buildSettings = {
+                CLANG_ENABLE_MODULES = YES;
+                CODE_SIGNING_ALLOWED = NO;
+                // Keep Debug symbols; do not attempt to strip Apple's signed test frameworks.
+                COPY_PHASE_STRIP = NO;
+                DEBUG_INFORMATION_FORMAT = dwarf;
+                IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+                SDKROOT = iphoneos;
+                SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+                SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+                SWIFT_STRICT_CONCURRENCY = complete;
+                SWIFT_VERSION = 6.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+            };
+        };
+        B00000000000000000000001 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = B00000000000000000000003;
+            buildPhases = (B00000000000000000000005);
+            buildRules = ();
+            dependencies = ();
+            name = ControlKitFixture;
+            productName = ControlKitFixture;
+            productReference = B00000000000000000000002;
+            productType = "com.apple.product-type.application";
+        };
+        B00000000000000000000002 = {
+            isa = PBXFileReference;
+            explicitFileType = wrapper.application;
+            path = ControlKitFixture.app;
+            sourceTree = BUILT_PRODUCTS_DIR;
+        };
+        B00000000000000000000003 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (B00000000000000000000004);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Debug;
+        };
+        B00000000000000000000004 = {
+            isa = XCBuildConfiguration;
+            name = Debug;
+            buildSettings = {
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+                PRODUCT_BUNDLE_IDENTIFIER = dev.controlkit.fixture;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+            };
+        };
+        B00000000000000000000005 = {
+            isa = PBXSourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (B00000000000000000000007);
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        B00000000000000000000006 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = Fixture/App.swift;
+            sourceTree = "<group>";
+        };
+        B00000000000000000000007 = {
+            isa = PBXBuildFile;
+            fileRef = B00000000000000000000006;
+        };
+        C00000000000000000000001 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = C00000000000000000000003;
+            buildPhases = (C00000000000000000000005);
+            buildRules = ();
+            dependencies = ();
+            name = ControlKitHelper;
+            productName = ControlKitHelper;
+            productReference = C00000000000000000000002;
+            productType = "com.apple.product-type.bundle.ui-testing";
+        };
+        C00000000000000000000002 = {
+            isa = PBXFileReference;
+            explicitFileType = wrapper.cfbundle;
+            path = ControlKitHelper.xctest;
+            sourceTree = BUILT_PRODUCTS_DIR;
+        };
+        C00000000000000000000003 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (C00000000000000000000004);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Debug;
+        };
+        C00000000000000000000004 = {
+            isa = XCBuildConfiguration;
+            name = Debug;
+            buildSettings = {
+                GENERATE_INFOPLIST_FILE = YES;
+                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+                PRODUCT_BUNDLE_IDENTIFIER = dev.controlkit.helper;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                TEST_TARGET_NAME = "";
+            };
+        };
+        C00000000000000000000005 = {
+            isa = PBXSourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+                C00000000000000000000009, C0000000000000000000000A,
+                C0000000000000000000000B, D00000000000000000000003,
+                D00000000000000000000004
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        C00000000000000000000006 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = Helper/ProbeTests.swift;
+            sourceTree = "<group>";
+        };
+        C00000000000000000000007 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = Helper/ProbeServer.swift;
+            sourceTree = "<group>";
+        };
+        C00000000000000000000008 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = Helper/ProbeAutomation.swift;
+            sourceTree = "<group>";
+        };
+        C00000000000000000000009 = {
+            isa = PBXBuildFile;
+            fileRef = C00000000000000000000006;
+        };
+        C0000000000000000000000A = {
+            isa = PBXBuildFile;
+            fileRef = C00000000000000000000007;
+        };
+        C0000000000000000000000B = {
+            isa = PBXBuildFile;
+            fileRef = C00000000000000000000008;
+        };
+        D00000000000000000000001 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = ../Sources/ControlKitProbeCore/ProbeProtocol.swift;
+            sourceTree = "<group>";
+        };
+        D00000000000000000000002 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = ../Sources/ControlKitProbeCore/ProbeWire.swift;
+            sourceTree = "<group>";
+        };
+        D00000000000000000000003 = {
+            isa = PBXBuildFile;
+            fileRef = D00000000000000000000001;
+        };
+        D00000000000000000000004 = {
+            isa = PBXBuildFile;
+            fileRef = D00000000000000000000002;
+        };
+    };
+    rootObject = A00000000000000000000001;
+}

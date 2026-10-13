@@ -1,0 +1,11 @@
+{
+    "schemaVersion": 1,
+    "requestId": "00000000-0000-0000-0000-000000000001",
+    "supervisorEpoch": null,
+    "sessionId": null,
+    "helperGeneration": null,
+    "ok": false,
+    "completion": "not_dispatched",
+    "error": { "code": "invalid_argument", "message": "Timeout exceeds the maximum." },
+    "data": null
+}
