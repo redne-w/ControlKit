@@ -62,6 +62,7 @@ package struct SessionHelper {
                 throw RuntimeFailure("app_not_foreground", "Target app is not foreground.")
             }
         } catch {
+            DiagnosticLog.failure("helper.attach_failed", error, ["session": session.uuidString])
             try helper.retire(graceSeconds: 5)
             throw error
         }

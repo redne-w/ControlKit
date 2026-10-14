@@ -99,7 +99,7 @@ run_install "$binary" "$runtime/custom prefix"
 [[ -f "$runtime/custom prefix/share/ControlKit/skills/ios-use-controlkit/SKILL.md" ]]
 installed_build=$(cat "$runtime/custom prefix/share/ControlKit/build-info")
 [[ -n "$installed_build" ]]
-[[ $("$runtime/custom prefix/bin/ControlKit" --version) = *"($installed_build)" ]]
+[[ $("$runtime/custom prefix/bin/ControlKit" --version) = "${installed_build#v}" ]]
 grep -Fqx '# Keep symlinked configuration' "$HOME/config"
 verify_lookup /bin/zsh "$HOME/.zshrc" "$runtime/custom prefix/bin"
 export HOME="$runtime/unsupported-home" SHELL=/bin/unsupported

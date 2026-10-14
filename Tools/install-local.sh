@@ -76,7 +76,7 @@ main() {
     [[ -f "$1" && -x "$1" ]] || fail "Not an executable file: $1"
     [[ -n ${HOME:-} ]] || fail 'HOME must be set.'
     validate_path "$HOME"
-    local binary=$1 prefix=${2:-"$HOME/.local"} bin quoted source_root share
+    local binary=$1 prefix=${2:-"$HOME/.local"} bin quoted share
     local profiles=()
     shell=${SHELL:-}
     shell=${shell##*/}
@@ -95,8 +95,6 @@ main() {
     bin=$(cd "$prefix/bin" && pwd -P)
     validate_path "$bin"
     [[ ! -L "$bin/ControlKit" ]] || fail "Refusing to overwrite a symlink: $bin/ControlKit"
-    install -m 755 "$binary" "$bin/ControlKit"
-    source_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
     share="$prefix/share/ControlKit"
     [[ ! -L "$share" ]] || fail "Refusing to replace a symlink: $share"
     if [[ -e "$share" ]]; then
@@ -104,34 +102,7 @@ main() {
         [[ -z $(find "$share" -type l -print -quit) ]] ||
             fail "Helper-source tree contains a symlink: $share"
     fi
-    install -d -m 755 \
-        "$share/Helper/ControlKitRuntime.xcodeproj/xcshareddata/xcschemes" \
-        "$share/Sources/ControlKitWire" \
-        "$share/skills/ios-use-controlkit"
-    install -m 644 \
-        "$source_root/Helper/RuntimeAutomation.swift" \
-        "$source_root/Helper/RuntimeSnapshot.swift" \
-        "$source_root/Helper/RuntimeTests.swift" \
-        "$share/Helper/"
-    install -m 644 \
-        "$source_root/Helper/ControlKitRuntime.xcodeproj/project.pbxproj" \
-        "$share/Helper/ControlKitRuntime.xcodeproj/"
-    install -m 644 \
-        "$source_root/Helper/ControlKitRuntime.xcodeproj/xcshareddata/xcschemes/ControlKitRuntime.xcscheme" \
-        "$share/Helper/ControlKitRuntime.xcodeproj/xcshareddata/xcschemes/"
-    install -m 644 "$source_root"/Sources/ControlKitWire/*.swift "$share/Sources/ControlKitWire/"
-    install -m 644 \
-        "$source_root/plugins/ios/skills/ios-use-controlkit/SKILL.md" \
-        "$share/skills/ios-use-controlkit/"
-    # ControlKit --version and every diagnostic log line report this exact build.
-    local commit
-    if commit=$(git -C "$source_root" rev-parse --short=12 HEAD 2>/dev/null); then
-        [[ -z $(git -C "$source_root" status --porcelain 2>/dev/null) ]] || commit="$commit-dirty"
-    else
-        commit=unknown-commit
-    fi
-    printf '%s\n' "$commit" > "$share/build-info"
-    chmod 644 "$share/build-info"
+    bash "$(dirname "${BASH_SOURCE[0]}")/package-release.sh" "$binary" "$prefix"
     quoted=$(quote_path "$bin")
     if [[ "$shell" = fish ]]; then
         path_line="fish_add_path --path --prepend $quoted"

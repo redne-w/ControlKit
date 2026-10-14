@@ -707,6 +707,8 @@ package final class SupervisorCore: @unchecked Sendable {
     private func startFailed(
         _ request: SupervisorRequest, record: SessionRecord, failure startup: RuntimeFailure
     ) -> SupervisorResponse {
+        // The response may replace this cause with a generic fencing message.
+        DiagnosticLog.failure("session.start_failed", startup, ["session": record.id.uuidString])
         var released = false
         if startup.code != "retirement_unconfirmed" {
             do {

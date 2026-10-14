@@ -1,13 +1,12 @@
 import Foundation
 
 package enum ControlKitVersion {
-    package static let number = "0.1.0"
-
-    /// Testers install from source, so the commit identifies their build more precisely than the
-    /// version number. `install-local.sh` records it beside the installed helper sources.
+    /// Git tags are the only version source. Packaging writes `git describe` output beside the
+    /// installed helper sources: "v1.2.3" for a release, "v1.2.3-4-gabc1234-dirty" for a local
+    /// build. A binary run straight from a build directory has no such file.
     package static let description: String = {
         guard let executable = Bundle.main.executableURL?.resolvingSymlinksInPath() else {
-            return number
+            return "development build"
         }
         let info = executable.deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("share/ControlKit/build-info")
@@ -15,7 +14,7 @@ package enum ControlKitVersion {
             let text = String(data: data, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
             !text.isEmpty, !text.contains(where: \.isNewline)
-        else { return "\(number) (development build)" }
-        return "\(number) (\(text))"
+        else { return "development build" }
+        return text.hasPrefix("v") ? String(text.dropFirst()) : text
     }()
 }

@@ -1,0 +1,9 @@
+[versioning]
+tag_prefix = "v"
+
+[git]
+commit = true
+tag = true
+push = true
+commit_message = "Release v{{version}}"
+tag_message = "Release v{{version}}"

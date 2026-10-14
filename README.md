@@ -19,26 +19,20 @@ It uses only public XCTest APIs, with no Appium, WebDriverAgent, or idb.
 
 - macOS 15 or later on Apple silicon
 - Xcode 26 or later, with an iOS simulator runtime installed
-- [just](https://just.systems) for building from source
+- [just](https://just.systems), only for building from source
 
 ControlKit uses the Xcode selected by `DEVELOPER_DIR` (or `xcode-select`) and never changes it.
 
 ## Installation
 
 ```sh
-git clone git@github.com:redne-w/ControlKit.git
-cd ControlKit
-just install
-```
-
-This installs `ControlKit` to `~/.local/bin` and adds that directory to your shell's `PATH`
-(zsh, bash, or fish). Open a new terminal, then check it worked:
-
-```sh
+brew install redne-w/controlkit/controlkit
 ControlKit --version
 ```
 
-Use `just install /some/prefix` to install to `/some/prefix/bin` instead.
+To build from source instead, clone the repository and run `just install`. This installs
+`ControlKit` to `~/.local/bin` and adds that directory to your shell's `PATH` (zsh, bash, or
+fish); open a new terminal afterward. Use `just install /some/prefix` to install elsewhere.
 
 ## Usage
 
@@ -122,6 +116,11 @@ just acceptance <udid>   # end-to-end tests; boots and modifies that simulator
 ```
 
 Build output goes to `.build/toolchains/<Xcode build>/`, so different Xcode versions never mix.
+
+To release, bump the version with [sheepit](sheepit.toml), which commits, tags `vX.Y.Z`, and
+pushes. The tag runs `.github/workflows/release.yml`, which builds, tests, and attaches
+`controlkit-vX.Y.Z-macos-arm64.tar.gz` to a GitHub release. Then update `url` and `sha256` in
+the [Homebrew tap](https://github.com/redne-w/homebrew-controlkit).
 
 ## License
 

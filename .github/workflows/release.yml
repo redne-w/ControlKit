@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release
+    # Package.swift needs Swift tools 6.2 (Xcode 26); macos-26 is arm64 with Xcode 26 by default.
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # git describe needs the tag history to write build-info.
+          fetch-depth: 0
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Build
+        run: swift build -c release --product ControlKit -Xswiftc -warnings-as-errors
+
+      - name: Test
+        run: swift test -Xswiftc -warnings-as-errors
+
+      - name: Package
+        run: |
+          root="$RUNNER_TEMP/controlkit"
+          archive="controlkit-${GITHUB_REF_NAME}-macos-arm64.tar.gz"
+          bash Tools/package-release.sh .build/release/ControlKit "$root"
+          version=$("$root/bin/ControlKit" --version)
+          if [ "$version" != "${GITHUB_REF_NAME#v}" ]; then
+              echo "Packaged version '$version' does not match tag $GITHUB_REF_NAME" >&2
+              exit 1
+          fi
+          mkdir dist
+          tar -czf "dist/$archive" -C "$root" bin share
+          (cd dist && shasum -a 256 "$archive" | tee "$archive.sha256")
+
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
+          generateReleaseNotes: true
+          makeLatest: true
