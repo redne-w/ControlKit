@@ -83,7 +83,7 @@ import Testing
         try #require(mkfifo(root.appendingPathComponent("pipe.ips").path, 0o600) == 0)
         _ = try AppDiagnostics.crashFile(
             valid, device: device, bundle: "dev.example", since: 60, now: now,
-            until: .now.advanced(by: .seconds(1)))
+            until: .now.advanced(by: .seconds(10)))
         let reports = try AppDiagnostics.scanCrashes(
             directory: root, device: device, bundle: "dev.example", since: 60,
             limit: 10, now: now)

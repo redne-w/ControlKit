@@ -37,7 +37,7 @@ struct WireTests {
 
     @Test func listenerKeepsPortAndHelperConnectsOutward() throws {
         let listener = try WireListener()
-        let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+        let deadline = ContinuousClock.now.advanced(by: .seconds(10))
         let helper = try WireListener.connect(port: listener.port, until: deadline)
         let host = try listener.accept(until: deadline)
         listener.close()
@@ -59,7 +59,7 @@ struct WireTests {
                 Darwin.send(writer.descriptor, $0.baseAddress!, $0.count, 0)
             }
             #expect(throws: WireFailure.invalidFrame) {
-                _ = try reader.receive(limit: 4_096, until: .now.advanced(by: .seconds(1)))
+                _ = try reader.receive(limit: 4_096, until: .now.advanced(by: .seconds(10)))
             }
         }
         let (writer, reader) = try pair()
@@ -67,7 +67,7 @@ struct WireTests {
         _ = bytes.withUnsafeBytes { Darwin.send(writer.descriptor, $0.baseAddress!, $0.count, 0) }
         writer.close()
         #expect(throws: WireFailure.disconnected) {
-            _ = try reader.receive(limit: 4_096, until: .now.advanced(by: .seconds(1)))
+            _ = try reader.receive(limit: 4_096, until: .now.advanced(by: .seconds(10)))
         }
     }
 
@@ -119,7 +119,7 @@ struct WireTests {
         ]
         bytes.append(contentsOf: payload)
         var cursor = 0
-        let received = try reader.receive(limit: 4_096, until: .now.advanced(by: .seconds(1))) {
+        let received = try reader.receive(limit: 4_096, until: .now.advanced(by: .seconds(10))) {
             if cursor < bytes.count {
                 var byte = bytes[cursor]
                 #expect(Darwin.send(writer.descriptor, &byte, 1, 0) == 1)
@@ -159,7 +159,8 @@ struct WireTests {
         reply.requestId = UUID()
         reply.operation = "ui.inspect"
         reply.result = largeInspectResult()
-        let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+        // Generous: these check correctness, and shared CI machines run tests slowly in parallel.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(10))
         let sent = DispatchSemaphore(value: 0)
         let sentReply = reply
         DispatchQueue.global().async {
@@ -169,14 +170,15 @@ struct WireTests {
         let received = try reader.receive(
             limit: 2 * 1_024 * 1_024, until: deadline)
         #expect(received.result?.snapshot?.nodes.count == 20)
-        #expect(sent.wait(timeout: .now() + 1) == .success)
+        #expect(sent.wait(timeout: .now() + 10) == .success)
     }
 
     @Test func binaryArtifactRoundTripAndDigestFailure() throws {
         let data = Data((0..<100_000).map { UInt8(truncatingIfNeeded: $0) })
         let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         let (writer, reader) = try pair()
-        let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+        // Generous: these check correctness, and shared CI machines run tests slowly in parallel.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(10))
         let sent = DispatchSemaphore(value: 0)
         DispatchQueue.global().async {
             try? writer.sendBinary(data, until: deadline)
@@ -185,7 +187,7 @@ struct WireTests {
         let received = try reader.receiveBinary(
             count: data.count, sha256: digest, until: deadline)
         #expect(received == data)
-        #expect(sent.wait(timeout: .now() + 1) == .success)
+        #expect(sent.wait(timeout: .now() + 10) == .success)
 
         let (badWriter, badReader) = try pair()
         DispatchQueue.global().async {

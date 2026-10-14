@@ -43,7 +43,7 @@ struct SupervisorProtocolTests {
             simulatorSDKBuild: "B")
         let request = SupervisorRequest(
             operation: "session.list", toolchain: toolchain, remainingMilliseconds: 5_000)
-        let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+        let deadline = ContinuousClock.now.advanced(by: .seconds(10))
         try client.sendJSON(request, limit: 65_536, until: deadline)
         let received = try accepted.receiveJSON(
             SupervisorRequest.self, limit: 65_536, until: deadline)
