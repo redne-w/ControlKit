@@ -1,9 +1,9 @@
-[versioning]
-tag_prefix = "v"
-
-[git]
-commit = true
-tag = true
-push = true
-commit_message = "Release v{{version}}"
-tag_message = "Release v{{version}}"
+# Releases are tag-only: --version comes from git describe, so no files need rewriting.
+# Pushing the v* tag runs .github/workflows/release.yml.
+[repository]
+default_branch = 'main'
+enable_branch = false
+enable_commit = false
+enable_tag = true
+enable_push = true
+tag_pattern = 'v{version}'
