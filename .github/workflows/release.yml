@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+  # Manual runs build, test, and package without publishing a release.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -34,10 +36,11 @@ jobs:
       - name: Package
         run: |
           root="$RUNNER_TEMP/controlkit"
-          archive="controlkit-${GITHUB_REF_NAME}-macos-arm64.tar.gz"
+          archive="controlkit-${GITHUB_REF_NAME//\//-}-macos-arm64.tar.gz"
           bash Tools/package-release.sh .build/release/ControlKit "$root"
           version=$("$root/bin/ControlKit" --version)
-          if [ "$version" != "${GITHUB_REF_NAME#v}" ]; then
+          echo "Packaged version: $version"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$version" != "${GITHUB_REF_NAME#v}" ]; then
               echo "Packaged version '$version' does not match tag $GITHUB_REF_NAME" >&2
               exit 1
           fi
@@ -46,6 +49,7 @@ jobs:
           (cd dist && shasum -a 256 "$archive" | tee "$archive.sha256")
 
       - name: Create release
+        if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
         with:
           artifacts: "dist/*"

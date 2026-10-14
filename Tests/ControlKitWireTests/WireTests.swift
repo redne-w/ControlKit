@@ -159,14 +159,15 @@ struct WireTests {
         reply.requestId = UUID()
         reply.operation = "ui.inspect"
         reply.result = largeInspectResult()
-        // Generous: these check correctness, and shared CI machines run tests slowly in parallel.
+        // The writer gets its own thread: on small CI machines, parallel blocking tests can
+        // occupy every GCD worker, so a global-queue writer never runs and the read stalls.
         let deadline = ContinuousClock.now.advanced(by: .seconds(10))
         let sent = DispatchSemaphore(value: 0)
         let sentReply = reply
-        DispatchQueue.global().async {
+        Thread {
             try? writer.send(sentReply, limit: 2 * 1_024 * 1_024, until: deadline)
             sent.signal()
-        }
+        }.start()
         let received = try reader.receive(
             limit: 2 * 1_024 * 1_024, until: deadline)
         #expect(received.result?.snapshot?.nodes.count == 20)
@@ -177,22 +178,23 @@ struct WireTests {
         let data = Data((0..<100_000).map { UInt8(truncatingIfNeeded: $0) })
         let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         let (writer, reader) = try pair()
-        // Generous: these check correctness, and shared CI machines run tests slowly in parallel.
+        // The writer gets its own thread: on small CI machines, parallel blocking tests can
+        // occupy every GCD worker, so a global-queue writer never runs and the read stalls.
         let deadline = ContinuousClock.now.advanced(by: .seconds(10))
         let sent = DispatchSemaphore(value: 0)
-        DispatchQueue.global().async {
+        Thread {
             try? writer.sendBinary(data, until: deadline)
             sent.signal()
-        }
+        }.start()
         let received = try reader.receiveBinary(
             count: data.count, sha256: digest, until: deadline)
         #expect(received == data)
         #expect(sent.wait(timeout: .now() + 10) == .success)
 
         let (badWriter, badReader) = try pair()
-        DispatchQueue.global().async {
+        Thread {
             try? badWriter.sendBinary(data, until: deadline)
-        }
+        }.start()
         #expect(throws: WireFailure.invalidFrame) {
             _ = try badReader.receiveBinary(
                 count: data.count, sha256: String(repeating: "0", count: 64), until: deadline)
