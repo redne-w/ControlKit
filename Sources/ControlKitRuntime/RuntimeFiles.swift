@@ -65,7 +65,9 @@ enum RuntimeFiles {
                     try requireRuntime(depth < 32, "resource_limit", "Cache depth exceeds 32.")
                     pending.append((child, depth + 1))
                 } else if info.st_mode & S_IFMT == S_IFREG {
-                    bytes += UInt64(max(0, info.st_size))
+                    // Allocated blocks, not st_size: Xcode's compilation cache creates sparse
+                    // files whose apparent size (tens of GiB) far exceeds their disk use.
+                    bytes += UInt64(max(0, info.st_blocks)) * 512
                     try requireRuntime(
                         bytes <= maximumBytes,
                         "resource_limit", "Retained files exceed their byte budget.")

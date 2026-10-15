@@ -58,7 +58,13 @@ package struct SessionHelper {
             let attached = try helper.execute(
                 requestID: UUID(), operation: "lifecycle.attach", parameters: nil,
                 deadline: min(budget.end, .now.advanced(by: .seconds(5))))
-            guard attached.0.error == nil else {
+            if let refused = attached.0.error {
+                DiagnosticLog.record(
+                    "helper.attach_refused",
+                    [
+                        "session": session.uuidString, "code": refused.code,
+                        "message": refused.message,
+                    ])
                 throw RuntimeFailure("app_not_foreground", "Target app is not foreground.")
             }
         } catch {

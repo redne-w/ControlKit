@@ -3,19 +3,38 @@ import UIKit
 
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
-    var window: UIWindow?
-
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         Logger(subsystem: "dev.controlkit.fixture", category: "fixture")
             .notice("ControlKit fixture launched")
-        let window = UIWindow(frame: UIScreen.main.bounds)
+        return true
+    }
+
+    // iOS 27 terminates apps that have not adopted the scene lifecycle.
+    func application(
+        _ application: UIApplication, configurationForConnecting session: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(name: nil, sessionRole: session.role)
+        configuration.delegateClass = SceneDelegate.self
+        return configuration
+    }
+}
+
+final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+    var window: UIWindow?
+
+    func scene(
+        _ scene: UIScene, willConnectTo session: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) {
+        guard let scene = scene as? UIWindowScene else { return }
+        let window = UIWindow(windowScene: scene)
         window.rootViewController = UINavigationController(rootViewController: HomeController())
         window.makeKeyAndVisible()
         self.window = window
-        return true
     }
 }
 

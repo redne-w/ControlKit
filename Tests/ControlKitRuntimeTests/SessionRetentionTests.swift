@@ -60,11 +60,13 @@ struct SessionRetentionTests {
         defer { fixture.remove() }
         let run = try fixture.run(UUID())
         try SessionRetention.markRetired(run)
-        try fixture.sparseFile(run, bytes: SessionRetention.maximumBytes)
-        _ = try SessionRetention.reserve(UUID(), in: fixture.root)
+        // Budgets count allocated blocks, so the artifact holds real data rather than a hole.
+        try fixture.dataFile(run, bytes: 64 * 1_024)
+        let budget = try RuntimeFiles.cacheBytes(fixture.url, maximumBytes: .max)
+        _ = try SessionRetention.reserve(UUID(), in: fixture.root, maximumBytes: budget)
         #expect(FileManager.default.fileExists(atPath: run.url.path))
-        try fixture.resizeSparseFile(run, bytes: SessionRetention.maximumBytes + 1)
-        _ = try SessionRetention.reserve(UUID(), in: fixture.root)
+        try fixture.dataFile(run, bytes: 64 * 1_024, name: "artifact-2")
+        _ = try SessionRetention.reserve(UUID(), in: fixture.root, maximumBytes: budget)
 
         #expect(!FileManager.default.fileExists(atPath: run.url.path))
     }
@@ -139,20 +141,8 @@ private final class RetentionFixture {
         try root.entries().filter { UUID(uuidString: $0) != nil }.count
     }
 
-    func sparseFile(_ run: PrivateDirectory, bytes: UInt64) throws {
-        let path = run.url.appendingPathComponent("artifact").path
-        let descriptor = open(path, O_WRONLY | O_CREAT | O_EXCL, 0o600)
-        try #require(descriptor >= 0)
-        defer { close(descriptor) }
-        try #require(ftruncate(descriptor, off_t(bytes)) == 0)
-    }
-
-    func resizeSparseFile(_ run: PrivateDirectory, bytes: UInt64) throws {
-        let path = run.url.appendingPathComponent("artifact").path
-        let descriptor = open(path, O_WRONLY)
-        try #require(descriptor >= 0)
-        defer { close(descriptor) }
-        try #require(ftruncate(descriptor, off_t(bytes)) == 0)
+    func dataFile(_ run: PrivateDirectory, bytes: Int, name: String = "artifact") throws {
+        try Data(repeating: 7, count: bytes).write(to: run.url.appendingPathComponent(name))
     }
 
     func setMarkerTime(_ run: PrivateDirectory, seconds: Int) throws {

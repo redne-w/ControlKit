@@ -8,7 +8,7 @@ package enum SessionRetention {
     private static let lockName = "retention.lock"
 
     package static func reserve(
-        _ id: UUID, in root: PrivateDirectory,
+        _ id: UUID, in root: PrivateDirectory, maximumBytes: UInt64 = maximumBytes,
         until deadline: ContinuousClock.Instant = .now.advanced(by: .seconds(5))
     ) throws -> PrivateDirectory {
         let lock = try acquireLock(root, until: deadline)

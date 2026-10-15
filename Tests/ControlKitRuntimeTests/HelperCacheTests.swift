@@ -39,10 +39,27 @@ struct HelperCacheTests {
         try FileManager.default.createSymbolicLink(
             at: root.appendingPathComponent("outside"),
             withDestinationURL: URL(fileURLWithPath: "/"))
-        #expect(try RuntimeFiles.cacheBytes(root, maximumBytes: 100) == 100)
+        var info = stat()
+        try #require(stat(root.appendingPathComponent("data").path, &info) == 0)
+        let allocated = UInt64(info.st_blocks) * 512
+        #expect(allocated >= 100)
+        #expect(try RuntimeFiles.cacheBytes(root, maximumBytes: allocated) == allocated)
         #expect(throws: RuntimeFailure.self) {
-            _ = try RuntimeFiles.cacheBytes(root, maximumBytes: 99)
+            _ = try RuntimeFiles.cacheBytes(root, maximumBytes: allocated - 1)
         }
+    }
+
+    /// Xcode's compilation cache preallocates sparse files with huge apparent sizes.
+    @Test func sparseFilesCountAllocatedBytesOnly() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let directory = try PrivateDirectory(root)
+        try directory.write("sparse", data: Data())
+        let file = open(root.appendingPathComponent("sparse").path, O_WRONLY)
+        try #require(file >= 0)
+        defer { close(file) }
+        try #require(ftruncate(file, 8 * 1_024 * 1_024 * 1_024) == 0)
+        #expect(try RuntimeFiles.cacheBytes(root, maximumBytes: 1_024 * 1_024) <= 1_024 * 1_024)
     }
 
     @Test func cacheEntryBudgetIsConfigurableAndExact() throws {

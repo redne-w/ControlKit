@@ -551,9 +551,11 @@ final class RuntimeAutomation {
     }
 
     private func foreground() throws {
-        guard app.state == .runningForeground else {
+        let state = app.state
+        guard state == .runningForeground else {
             throw RuntimeAutomationFailure(
-                "app_not_foreground", "Launch or activate the app explicitly.")
+                "app_not_foreground",
+                "Launch or activate the app explicitly (XCTest state \(state.rawValue)).")
         }
     }
 
