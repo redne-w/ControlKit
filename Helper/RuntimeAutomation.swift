@@ -279,7 +279,7 @@ final class RuntimeAutomation {
                 }
             }
         }
-        return matches
+        return collapsingDuplicates(matches)
     }
 
     private func verifyCleared(
@@ -389,7 +389,7 @@ final class RuntimeAutomation {
         guard let selector else { throw WireFailure.invalidMessage }
         try foreground()
         guard selector.x == nil, selector.y == nil else { throw WireFailure.invalidMessage }
-        let matches = try query(selector, requireHittable: true)
+        let matches = collapsingDuplicates(try query(selector, requireHittable: true))
         guard !matches.isEmpty else {
             throw RuntimeAutomationFailure("element_not_found", "No element matches the selector.")
         }
@@ -405,7 +405,7 @@ final class RuntimeAutomation {
             guard selector.snapshotId == snapshotID, let saved = references[reference] else {
                 throw RuntimeAutomationFailure("stale_reference", "Element reference is stale.")
             }
-            let found = try referenceElements(saved)
+            let found = collapsingDuplicates(try referenceElements(saved))
             guard found.count == 1 else {
                 throw RuntimeAutomationFailure("stale_reference", "Referenced element changed.")
             }
@@ -418,6 +418,18 @@ final class RuntimeAutomation {
             throw RuntimeAutomationFailure("resource_limit", "Action query exceeds 512 elements.")
         }
         return try actionable(found, required: requireHittable)
+    }
+
+    /// SwiftUI can expose one control as several accessibility elements with the same type,
+    /// identifier, label, and frame. They are one on-screen target, so act on the first rather
+    /// than refusing the selector as ambiguous.
+    private func collapsingDuplicates(_ elements: [XCUIElement]) -> [XCUIElement] {
+        guard let first = elements.first, elements.count > 1 else { return elements }
+        let identical = elements.dropFirst().allSatisfy {
+            $0.elementType == first.elementType && $0.identifier == first.identifier
+                && $0.label == first.label && $0.frame == first.frame
+        }
+        return identical ? [first] : elements
     }
 
     private func actionable(_ found: [XCUIElement], required: Bool) throws -> [XCUIElement] {

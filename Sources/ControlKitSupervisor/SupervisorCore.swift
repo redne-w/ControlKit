@@ -911,7 +911,16 @@ package final class SupervisorCore: @unchecked Sendable {
             if !uncertain { record.sealingResults.insert(request.requestId) }
             if uncertain { condition.broadcast() }
             condition.unlock()
-            if uncertain { return finishUnknown(request, record: record) }
+            if uncertain {
+                // The reply below is generic; keep the helper's reason for diagnosis.
+                DiagnosticLog.record(
+                    "command.uncertain",
+                    [
+                        "session": record.id.uuidString, "operation": operation.rawValue,
+                        "reason": reply.error?.message ?? "none",
+                    ])
+                return finishUnknown(request, record: record)
+            }
             if let error = reply.error {
                 condition.lock()
                 record.sealingResults.remove(request.requestId)

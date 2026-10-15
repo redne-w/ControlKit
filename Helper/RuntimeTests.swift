@@ -5,6 +5,7 @@ import XCTest
 final class RuntimeIssueObserver: NSObject, XCTestObservation, @unchecked Sendable {
     private let lock = NSLock()
     private var recorded = 0
+    private var latest = ""
 
     var count: Int {
         lock.lock()
@@ -12,9 +13,18 @@ final class RuntimeIssueObserver: NSObject, XCTestObservation, @unchecked Sendab
         return recorded
     }
 
+    /// The most recent issue's text, bounded: it names the XCTest failure behind an uncertain
+    /// outcome, which is otherwise invisible to the agent and the logs.
+    var latestDescription: String {
+        lock.lock()
+        defer { lock.unlock() }
+        return latest
+    }
+
     func testCase(_ testCase: XCTestCase, didRecord issue: XCTIssue) {
         lock.lock()
         recorded += 1
+        latest = String(issue.compactDescription.prefix(300))
         lock.unlock()
     }
 }
@@ -79,7 +89,9 @@ final class RuntimeTests: XCTestCase {
                     let executed = try automation.execute(request)
                     if issues.count != issueCount! {
                         throw RuntimeAutomationFailure(
-                            "outcome_unknown", "XCTest recorded an issue during the action.",
+                            "outcome_unknown",
+                            "XCTest recorded an issue during the action: "
+                                + issues.latestDescription,
                             uncertain: Self.isMutation(request.operation))
                     }
                     reply.result = executed.0
@@ -100,7 +112,8 @@ final class RuntimeTests: XCTestCase {
                     failure.uncertain || recordedIssue && Self.isMutation(request.operation)
                 let message =
                     recordedIssue
-                    ? "XCTest recorded an issue during the action." : failure.message
+                    ? "XCTest recorded an issue during the action: \(issues.latestDescription)"
+                    : failure.message
                 reply.error = WireError(
                     code: recordedIssue ? "outcome_unknown" : failure.code,
                     message: message)

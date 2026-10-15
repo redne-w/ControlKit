@@ -113,7 +113,15 @@ package struct SessionHelper {
             Thread.sleep(forTimeInterval: 0.01)
         }
         if process.result == nil { process.cancel() }
-        _ = try process.wait()
+        let exit = try process.wait()
+        if !exit.succeeded {
+            // A runner that ended early (for example after an XCTest failure) is otherwise
+            // invisible: its output is the only record of why.
+            DiagnosticLog.toolFailure(
+                label: "session_runner",
+                arguments: ["xcodebuild", "test-without-building", identity.sessionId.uuidString],
+                result: exit)
+        }
         let runnerDeadline = ContinuousClock.now.advanced(by: .seconds(4))
         while !(try runner.isRetired()) {
             try requireRuntime(
@@ -151,7 +159,9 @@ package struct SessionHelper {
                 "-parallel-testing-enabled", "NO", "-test-timeouts-enabled", "YES",
                 "-maximum-test-execution-time-allowance", "1800",
                 "-resultBundlePath", runtime.url.appendingPathComponent("result.xcresult").path,
-            ], milliseconds: 1_800_000, outputLimit: 0)
+            ], milliseconds: 1_800_000,
+            // Keeps XCTest's own failure text; test output without compilation stays small.
+            outputLimit: 1_048_576)
     }
 
     private static func authenticate(
