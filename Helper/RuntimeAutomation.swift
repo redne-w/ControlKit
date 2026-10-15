@@ -171,6 +171,7 @@ final class RuntimeAutomation {
         guard let text else { throw WireFailure.invalidMessage }
         let element = try textInput(selector)
         try focusTextInput(selector, element: element)
+        try awaitKeyboard { try self.focusTextInput(selector, element: element) }
         element.typeText(text)
         invalidateSnapshot()
         var result = UIResult()
@@ -195,7 +196,18 @@ final class RuntimeAutomation {
         }
         let deadline = ContinuousClock.now.advanced(
             by: .milliseconds(Int64(min(milliseconds, 5_000))))
-        element.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        // Typing into an unfocused field records an XCTest failure that ends the runner. The
+        // trailing tap only exists to put the cursor after existing text; it can land on an
+        // accessory icon, so an empty field is focused at its center like `type` does.
+        let focus = {
+            if deleteCount > 0 {
+                element.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+            } else {
+                element.tap()
+            }
+        }
+        focus()
+        try awaitKeyboard(refocus: focus)
         if deleteCount > 0 { element.typeText(String(repeating: "\u{8}", count: deleteCount)) }
         try verifyCleared(element, placeholder: placeholder, deadline: deadline)
         if !text.isEmpty { element.typeText(text) }
@@ -234,6 +246,21 @@ final class RuntimeAutomation {
             try coordinate(selector).tap()
         } else {
             element.tap()
+        }
+    }
+
+    /// typeText into an unfocused field records an XCTest failure that ends this runner, so
+    /// confirm focus first. The software keyboard is the public focus signal; a tap made while
+    /// a screen is still animating can miss, so focus is retried once.
+    private func awaitKeyboard(refocus: () throws -> Void) throws {
+        let keyboard = app.keyboards.firstMatch
+        if keyboard.waitForExistence(timeout: 1.5) { return }
+        try refocus()
+        guard keyboard.waitForExistence(timeout: 1.5) else {
+            throw RuntimeAutomationFailure(
+                "focus_failed",
+                "The field did not take keyboard focus. If the simulator's hardware keyboard is "
+                    + "connected (I/O > Keyboard), disconnect it.")
         }
     }
 
@@ -327,10 +354,17 @@ final class RuntimeAutomation {
         _ selector: UISelector?, state: String?, milliseconds: UInt64
     ) throws -> (UIResult, Data?) {
         guard let state else { throw WireFailure.invalidMessage }
-        let deadline = ContinuousClock.now.advanced(by: .milliseconds(Int64(milliseconds)))
+        // An unmet condition is an ordinary result, but a reply that lands after the caller's
+        // deadline is an uncertain outcome that fences the session. Keep a margin for the
+        // final query and the reply.
+        let reserve = min(1_000, milliseconds / 4)
+        let deadline = ContinuousClock.now.advanced(
+            by: .milliseconds(Int64(milliseconds - reserve)))
         var samples = 0
         while samples < 300 {
+            let started = ContinuousClock.now
             let matches = try query(selector, requireHittable: false)
+            let queryCost = started.duration(to: .now)
             let satisfied =
                 state == "absent"
                 ? matches.isEmpty
@@ -342,7 +376,7 @@ final class RuntimeAutomation {
                 result.waitMatched = true
                 return (result, nil)
             }
-            guard ContinuousClock.now < deadline else {
+            guard ContinuousClock.now.advanced(by: queryCost + .milliseconds(200)) < deadline else {
                 throw RuntimeAutomationFailure("deadline_exceeded", "Wait condition did not match.")
             }
             Thread.sleep(forTimeInterval: 0.2)
