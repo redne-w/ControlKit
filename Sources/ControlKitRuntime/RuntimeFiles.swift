@@ -76,4 +76,37 @@ enum RuntimeFiles {
         }
         return bytes
     }
+
+    /// Removes a directory tree iteratively. Symlinks are unlinked, never followed, so a link
+    /// planted inside a cache cannot redirect deletion outside it.
+    static func removeTree(
+        _ root: URL, maximumEntries: Int = CacheCleaner.maximumEntries,
+        until deadline: ContinuousClock.Instant
+    ) throws {
+        var pending: [(URL, Int, Bool)] = [(root, 0, false)]
+        var entries = 0
+        while let (url, depth, visited) = pending.popLast() {
+            try requireRuntime(
+                ContinuousClock.now < deadline, "deadline_exceeded", "Cache removal expired.")
+            if visited {
+                try requireRuntime(
+                    rmdir(url.path) == 0, "files", "Cannot remove cache directory.")
+                continue
+            }
+            pending.append((url, depth, true))
+            for name in try self.entries(url, limit: maximumEntries - entries) {
+                entries += 1
+                let child = url.appendingPathComponent(name)
+                var info = stat()
+                try requireRuntime(lstat(child.path, &info) == 0, "files", "Cannot inspect cache.")
+                if info.st_mode & S_IFMT == S_IFDIR {
+                    try requireRuntime(depth < 64, "resource_limit", "Cache depth exceeds 64.")
+                    pending.append((child, depth + 1, false))
+                } else {
+                    try requireRuntime(
+                        unlink(child.path) == 0, "files", "Cannot remove cache file.")
+                }
+            }
+        }
+    }
 }

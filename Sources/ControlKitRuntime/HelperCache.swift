@@ -32,14 +32,17 @@ enum HelperCache {
         if !reused {
             try requireRuntime(
                 names.filter { $0 != "build.lock" }.count < 4,
-                "resource_limit", "Helper cache is full; no live or incomplete entry is evicted.")
+                "resource_limit",
+                "Helper cache is full; stop sessions, then run 'ControlKit cache clean'."
+            )
         }
         directory = try PrivateDirectory(entry)
         _ = try RuntimeFiles.cacheBytes(cache)
         if reused {
             try requireRuntime(
                 try directory.exists("complete"), "cache_incomplete",
-                "An incomplete cache entry cannot be launched. Inspect it before removing it.")
+                "Interrupted helper build left an incomplete entry; run 'ControlKit cache clean'."
+            )
             let marker = try RuntimeFiles.read(entry.appendingPathComponent("complete"), limit: 64)
             try requireRuntime(
                 marker == Data(key.utf8), "cache_invalid", "Invalid cache identity marker.")

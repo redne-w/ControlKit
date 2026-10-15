@@ -23,7 +23,7 @@ package struct SupervisorRequest: Codable, Sendable {
         requestId: UUID = UUID(), operation: String, toolchain: ToolchainIdentity,
         remainingMilliseconds: UInt64
     ) {
-        schemaVersion = 17
+        schemaVersion = 18
         self.requestId = requestId
         self.operation = operation
         self.toolchain = toolchain
@@ -168,6 +168,7 @@ package struct SupervisorData: Codable, Sendable {
     package var logs: [DiagnosticEvent]?
     package var appLogs: AppLogResult?
     package var appCrashes: AppCrashResult?
+    package var cacheClean: CacheCleanResult?
 
     package init() {}
 }

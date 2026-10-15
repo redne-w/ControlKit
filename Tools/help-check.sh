@@ -60,6 +60,8 @@ check_help setup
 check_help run
 check_help logs
 check_help report
+check_help cache
+check_help cache clean
 leaf=$(env -u CONTROLKIT_PROBE_TOKEN "$binary" help report)
 case "$leaf" in *"Library/Logs/ControlKit"*"--output-directory"*"--files-only"*) ;; *) exit 1 ;; esac
 version=$(env -u CONTROLKIT_PROBE_TOKEN "$binary" --version)

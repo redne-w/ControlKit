@@ -159,6 +159,9 @@ package final class AppLifecycle {
         try claim.complete()
     }
 
+    package static let buildCacheRoot = URL(fileURLWithPath: NSHomeDirectory())
+        .appendingPathComponent("Library/Caches/ControlKit-builds-v2", isDirectory: true)
+
     private struct BuildCache {
         let root: PrivateDirectory
         let derived: PrivateDirectory
@@ -167,8 +170,7 @@ package final class AppLifecycle {
     private func buildCache(
         request: BuildRequest, tools: AppleTools, budget: OperationBudget
     ) throws -> BuildCache {
-        let rootURL = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("Library/Caches/ControlKit-builds-v2", isDirectory: true)
+        let rootURL = Self.buildCacheRoot
         let root = try PrivateDirectory(rootURL)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -182,7 +184,8 @@ package final class AppLifecycle {
         let existing = try root.entries(limit: 16).filter { $0 != "build.lock" }
         try requireRuntime(
             existing.contains(key) || existing.count < 4,
-            "resource_limit", "Build cache has four configurations; explicit cleanup is required.")
+            "resource_limit",
+            "Build cache holds four configurations; run 'ControlKit cache clean'.")
         let derived = try PrivateDirectory(rootURL.appendingPathComponent(key))
         _ = try RuntimeFiles.cacheBytes(
             rootURL, maximumBytes: 64 * 1_024 * 1_024 * 1_024,

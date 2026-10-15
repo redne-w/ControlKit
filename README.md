@@ -75,6 +75,7 @@ ControlKit setup --project . --scheme MyApp --configuration Debug --write
 | `session` | `start`, `list`, `status`, `recover`, `stop` automation sessions |
 | `ui` | `inspect`, `find`, `tap`, `type`, `set-text`, `swipe`, `scroll`, `wait`, `screenshot`, `system-alert` |
 | `logs` | Show recent events for a session |
+| `cache clean` | Remove cached app and helper builds when a cache is full |
 | `report` | Package diagnostics into a zip file for a bug report |
 
 Every command has help: `ControlKit help <command>` or `ControlKit <command> --help`.

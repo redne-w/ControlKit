@@ -167,6 +167,7 @@ package final class SupervisorCore: @unchecked Sendable {
         case "session.status": return status(request)
         case "session.recover": return try recover(request)
         case "session.stop": return try stop(request)
+        case "cache.clean", "cache.plan": return try cacheClean(request)
         default:
             guard let operation = SessionOperation(rawValue: request.operation) else {
                 return failure(request, "invalid_argument", "Unsupported supervisor operation.")
@@ -178,8 +179,28 @@ package final class SupervisorCore: @unchecked Sendable {
     private static let effectfulManagement: Set<String> = [
         "sim.create", "sim.boot", "sim.shutdown", "app.build", "app.install",
         "app.launch", "app.terminate", "setup", "run",
-        "session.start", "session.recover", "session.stop",
+        "session.start", "session.recover", "session.stop", "cache.clean",
     ]
+
+    private func cacheClean(_ request: SupervisorRequest) throws -> SupervisorResponse {
+        let dryRun = request.operation == "cache.plan"
+        let deadline = ContinuousClock.now.advanced(
+            by: .milliseconds(Int64(request.remainingMilliseconds)))
+        let result = try CacheCleaner.clean(
+            [
+                .init(name: "app_builds", url: AppLifecycle.buildCacheRoot),
+                .init(name: "helper_builds", url: cache),
+            ], dryRun: dryRun, until: deadline,
+            beforeRemoval: { [self] in
+                // A live runner executes from its helper build, so removal waits for stop.
+                try requireRuntime(
+                    dryRun || !hasLiveSessions, "device_busy",
+                    "Stop all sessions before cleaning caches.")
+            })
+        var data = SupervisorData()
+        data.cacheClean = result
+        return SupervisorResponse(request: request, epoch: epoch, completion: .finished, data: data)
+    }
 
     private func management(_ request: SupervisorRequest) -> SupervisorResponse {
         let fingerprint = self.fingerprint(request)
@@ -255,7 +276,7 @@ package final class SupervisorCore: @unchecked Sendable {
     }
 
     private func validate(_ request: SupervisorRequest) throws {
-        try requireRuntime(request.schemaVersion == 17, "protocol_mismatch", "Unsupported schema.")
+        try requireRuntime(request.schemaVersion == 18, "protocol_mismatch", "Unsupported schema.")
         try requireRuntime(
             request.toolchain == tools.identity,
             "toolchain_mismatch", "Supervisor is pinned to another exact Xcode toolchain.")

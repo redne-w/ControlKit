@@ -19,7 +19,8 @@ struct ControlKit: ParsableCommand {
         version: ControlKitVersion.description,
         subcommands: [
             ProbeCommand.self, Sim.self, App.self, Sessions.self, UI.self,
-            Doctor.self, Setup.self, Run.self, Logs.self, Report.self, InternalSupervisor.self,
+            Doctor.self, Setup.self, Run.self, Logs.self, Cache.self, Report.self,
+            InternalSupervisor.self,
         ]
     )
 

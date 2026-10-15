@@ -156,6 +156,12 @@ enum SupervisorCLI {
             for device in devices {
                 print("\(device.udid.uuidString) \(device.state) \(device.name)")
             }
+        } else if let clean = response.data?.cacheClean {
+            let verb = clean.dryRun ? "would remove" : "removed"
+            for entry in clean.entries {
+                print("\(verb) \(entry.cache)/\(entry.key) \(entry.bytes / 1_048_576) MiB")
+            }
+            print("\(verb) \(clean.entries.count) entries, \(clean.freedBytes / 1_048_576) MiB")
         } else if let artifact = response.data?.artifact {
             print("\(artifact.bundleIdentifier) \(artifact.path)")
         } else if let launch = response.data?.launch {
